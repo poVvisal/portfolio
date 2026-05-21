@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Moon, Sun, Mail, ChevronDown, ChevronUp, 
+  Mail, ChevronDown, ChevronUp, Download,
   Briefcase, GraduationCap, Award, ExternalLink, Database, Server, Code, Terminal, SquareTerminal, Sparkles
 } from 'lucide-react';
 
@@ -41,8 +41,36 @@ const fetchGeminiResponse = async (prompt, systemInstruction) => {
   }
 };
 
+const AnimatedSection = ({ children, className = "", id }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const domRef = useRef();
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        setIsVisible(true);
+        observer.unobserve(domRef.current);
+      }
+    }, { threshold: 0.15 });
+    
+    const { current } = domRef;
+    if (current) observer.observe(current);
+    
+    return () => { if (current) observer.unobserve(current); };
+  }, []);
+
+  return (
+    <section 
+      id={id}
+      ref={domRef} 
+      className={`transition-all duration-1000 ease-out transform ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'} w-full ${className}`}
+    >
+      {children}
+    </section>
+  );
+};
+
 const App = () => {
-  const [isDarkMode, setIsDarkMode] = useState(true);
   const [isProjectExpanded, setIsProjectExpanded] = useState(false);
   
   // AI Pitch State
@@ -60,6 +88,19 @@ const App = () => {
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [terminalHistory]);
+
+  // Permanently enforce dark mode and mouse tracking for interactive background
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+    
+    const handleMouseMove = (e) => {
+      document.documentElement.style.setProperty('--mouse-x', `${e.clientX}px`);
+      document.documentElement.style.setProperty('--mouse-y', `${e.clientY}px`);
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   const handleGeneratePitch = async () => {
     setIsGeneratingPitch(true);
@@ -98,53 +139,105 @@ const App = () => {
 
     let output = '';
 
-    switch (cmd) {
-      case 'help':
-        output = 'Available commands:\n  help          - Show this message\n  whoami        - Display current user\n  cat about.txt - Read bio summary\n  cat skills.sh - View tech stack\n  aws s3 ls     - List AWS buckets\n  get resume    - Download my resume (PDF)\n  ask [query]   - Ask the AI a question ✨\n  clear         - Clear terminal window';
-        break;
-      case 'whoami':
-        output = 'povvisal - Junior Cloud Infrastructure Engineer';
-        break;
-      case 'cat about.txt':
-        output = 'I am a Cloud Infrastructure student at AUPP specializing in AWS, Linux, and CI/CD pipelines.';
-        break;
-      case 'cat skills.sh':
-        output = '#!/bin/bash\necho "AWS, Terraform, Docker, Jenkins, Linux, Python, Go"';
-        break;
-      case 'aws s3 ls':
-        output = '2026-05-21 15:43:00 portfolio-assets-prod\n2026-05-21 15:43:00 terraform-state-bucket-xyz';
-        break;
-      case 'get resume':
-      case 'wget resume.pdf':
-        output = 'Resolving host...\nConnecting to server... connected.\nHTTP request sent, awaiting response... 200 OK\nSaving to: ‘resume.pdf’\n\nDownload triggered successfully!';
-        const link = document.createElement('a');
-        link.href = '/resume.pdf'; 
-        link.download = 'Pov_Visal_Resume.pdf';
-        link.click();
-        break;
-      case 'clear':
-        setTerminalHistory([]);
-        setTerminalInput('');
-        return;
-      case 'sudo rm -rf /':
-        output = 'bash: sudo: permission denied. Nice try though!';
-        break;
-      default:
-        output = `bash: ${cmd}: command not found. Type "help" for a list of commands.`;
+    if (cmd.startsWith('cd ')) {
+      output = `bash: cd: restricted shell, changing to ${rawInput.substring(3)} disabled.`;
+    } else if (cmd === 'cd') {
+      output = '';
+    } else if (cmd.startsWith('echo ')) {
+      output = rawInput.substring(5);
+    } else {
+      switch (cmd) {
+        case 'help':
+          output = `Available commands:
+  help          - Show this message
+  whoami        - Display current user
+  pwd           - Print working directory
+  ls            - List directory contents
+  cd            - Change directory
+  date          - Print system date and time
+  uptime        - Tell how long the system has been running
+  uname -a      - Print system information
+  df -h         - Report file system disk space usage
+  free -m       - Display amount of free and used memory
+  history       - Display command history
+  echo [text]   - Print text to terminal
+  cat [file]    - Read file (try: cat about.txt, cat skills.sh)
+  aws s3 ls     - List AWS buckets
+  get resume    - Download my resume (PDF)
+  ask [query]   - Ask the AI a question ✨
+  clear         - Clear terminal window`;
+          break;
+        case 'whoami':
+          output = 'povvisal - Junior Cloud Infrastructure Engineer';
+          break;
+        case 'pwd':
+          output = '/home/povvisal';
+          break;
+        case 'ls':
+        case 'ls -la':
+        case 'll':
+          output = `drwxr-xr-x 4 povvisal povvisal 4096 May 21 10:00 .
+drwxr-xr-x 3 root     root     4096 May 21 09:59 ..
+-rw-r--r-- 1 povvisal povvisal 1024 May 21 10:00 about.txt
+-rwxr-xr-x 1 povvisal povvisal 4096 May 21 10:00 skills.sh
+-rw-r--r-- 1 povvisal povvisal 2048 May 21 10:00 resume.pdf
+drwxr-xr-x 2 povvisal povvisal 4096 May 21 10:00 projects
+drwxr-xr-x 2 povvisal povvisal 4096 May 21 10:00 .aws`;
+          break;
+        case 'date':
+          output = new Date().toString();
+          break;
+        case 'uptime':
+          output = ' 10:03:00 up 42 days,  3:14,  1 user,  load average: 0.01, 0.05, 0.00';
+          break;
+        case 'uname -a':
+          output = 'Linux aws-portfolio-node 6.1.85-99.169.amzn2023.x86_64 #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux';
+          break;
+        case 'df -h':
+          output = `Filesystem      Size  Used Avail Use% Mounted on
+/dev/nvme0n1p1   20G  8.4G   12G  42% /`;
+          break;
+        case 'free -m':
+          output = `               total        used        free      shared  buff/cache   available
+Mem:            1984         512         420          10        1052        1300
+Swap:              0           0           0`;
+          break;
+        case 'history':
+          output = terminalHistory.map((item, index) => `  ${index + 1}  ${item.command.replace('visal@portfolio:~$ ', '')}`).join('\n');
+          output += `\n  ${terminalHistory.length + 1}  history`;
+          break;
+        case 'cat about.txt':
+          output = 'I am a Cloud Infrastructure student at AUPP specializing in AWS, Linux, and CI/CD pipelines.';
+          break;
+        case 'cat skills.sh':
+          output = '#!/bin/bash\necho "AWS, Terraform, Docker, Jenkins, Linux, Python, Go"';
+          break;
+        case 'aws s3 ls':
+          output = '2026-05-21 15:43:00 portfolio-assets-prod\n2026-05-21 15:43:00 terraform-state-bucket-xyz';
+          break;
+        case 'get resume':
+        case 'wget resume.pdf':
+          output = 'Resolving host...\nConnecting to server... connected.\nHTTP request sent, awaiting response... 200 OK\nSaving to: ‘resume.pdf’\n\nDownload triggered successfully!';
+          const link = document.createElement('a');
+          link.href = '/resume.pdf'; 
+          link.download = 'Pov_Visal_Resume.pdf';
+          link.click();
+          break;
+        case 'clear':
+          setTerminalHistory([]);
+          setTerminalInput('');
+          return;
+        case 'sudo rm -rf /':
+          output = 'bash: sudo: permission denied. Nice try though!';
+          break;
+        default:
+          output = `bash: ${cmd}: command not found. Type "help" for a list of commands.`;
+      }
     }
 
     setTerminalHistory([...terminalHistory, { command: `visal@portfolio:~$ ${terminalInput}`, output }]);
     setTerminalInput('');
   };
-
-  // Toggle Dark Mode
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDarkMode]);
 
   const awsBadges = [
     { name: "Cloud Architecting", url: "https://www.credly.com/badges/9f7e4185-d2cf-4b4e-a4de-a7988121e425/public_url", imgSrc: "https://images.credly.com/images/fcafd0c9-42da-4703-a191-0c397203dc1b/blob" },
@@ -191,55 +284,59 @@ const App = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300 font-sans selection:bg-orange-500 selection:text-white pb-16">
+    <div className="relative min-h-screen bg-slate-900 text-slate-200 transition-colors duration-300 font-sans selection:bg-orange-500 selection:text-white pb-16 overflow-hidden">
       
-      <nav className="fixed w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-sm border-b border-slate-200 dark:border-slate-800 z-50 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Interactive Cursor Background */}
+      <div 
+        className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-300"
+        style={{
+          background: `radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(249, 115, 22, 0.06), transparent 40%)`
+        }}
+      />
+
+      <nav className="fixed w-full bg-slate-900/80 backdrop-blur-md shadow-sm border-b border-slate-800 z-50 transition-colors duration-300">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="flex justify-between h-16 items-center">
             <div className="flex-shrink-0 font-bold text-xl tracking-tight">
-              PV<span className="text-orange-600 dark:text-orange-500">.</span>
+              PV<span className="text-orange-500">.</span>
             </div>
             <div className="hidden md:flex space-x-8 items-center">
               <a href="#about" className="text-sm font-medium hover:text-orange-500 transition-colors">About</a>
               <a href="#tech" className="text-sm font-medium hover:text-orange-500 transition-colors">Tech Stack</a>
               <a href="#github" className="text-sm font-medium hover:text-orange-500 transition-colors">GitHub</a>
               <a href="#projects" className="text-sm font-medium hover:text-orange-500 transition-colors">Architecture</a>
-              <button 
-                onClick={() => setIsDarkMode(!isDarkMode)}
-                className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors focus:outline-none"
-                aria-label="Toggle Theme"
-              >
-                {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-600" />}
-              </button>
             </div>
           </div>
         </div>
       </nav>
 
-      <main className="pt-20 md:pt-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12 md:space-y-16">
+      <main className="relative z-10 pt-20 md:pt-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-16 md:space-y-24">
         
-        <section id="hero" className="text-center pt-10 md:pt-16 pb-6 md:pb-8 animate-fade-in-up">
-          <p className="text-orange-600 dark:text-orange-500 font-semibold tracking-wide uppercase mb-3 flex items-center justify-center gap-2">
+        <AnimatedSection id="hero" className="text-left pt-10 md:pt-16 pb-6 md:pb-8">
+          <p className="text-orange-500 font-semibold tracking-wide uppercase mb-4 flex items-center justify-start gap-2">
             <Terminal size={18} /> Welcome to my portfolio
           </p>
-          <h1 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight text-white leading-tight">
             Hi, I'm <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-amber-500">Pov Visal</span>
           </h1>
-          <h2 className="text-xl md:text-2xl font-medium mb-8 max-w-2xl mx-auto text-slate-600 dark:text-slate-400">
+          <h2 className="text-xl md:text-2xl font-medium mb-10 max-w-2xl text-slate-400 leading-relaxed">
             Junior Cloud Infrastructure Engineer | AWS & DevOps Enthusiast
           </h2>
           
-          <div className="flex justify-center flex-wrap gap-4 mb-8">
-            <a href="#projects" className="bg-slate-900 dark:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-slate-800 dark:hover:bg-orange-700 transition-colors shadow-lg">
+          <div className="flex justify-start flex-wrap gap-4 mb-8">
+            <a href="#projects" className="bg-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-700 transition-colors shadow-lg">
               View Architecture
             </a>
-            <a href="mailto:P.visal6927@gmail.com" className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-6 py-3 rounded-lg font-medium hover:border-orange-500 dark:hover:border-orange-500 transition-colors shadow-sm">
+            <a href="/resume.pdf" download="Pov_Visal_Resume.pdf" className="bg-slate-800 border border-slate-700 text-slate-200 px-6 py-3 rounded-lg font-medium hover:border-orange-500 hover:text-orange-400 transition-colors shadow-sm flex items-center gap-2">
+              <Download size={18} /> Download CV
+            </a>
+            <a href="mailto:P.visal6927@gmail.com" className="bg-slate-800 border border-slate-700 text-slate-200 px-6 py-3 rounded-lg font-medium hover:border-orange-500 transition-colors shadow-sm">
               Contact Me
             </a>
             <button 
               onClick={handleGeneratePitch}
               disabled={isGeneratingPitch}
-              className="group flex items-center gap-2 bg-gradient-to-r from-amber-100 to-orange-100 dark:from-slate-800 dark:to-slate-800 border border-orange-200 dark:border-orange-900/50 text-orange-700 dark:text-orange-400 px-6 py-3 rounded-lg font-medium hover:border-orange-400 dark:hover:border-orange-500 transition-all shadow-sm disabled:opacity-70"
+              className="group flex items-center gap-2 bg-gradient-to-r from-slate-800 to-slate-800 border border-orange-900/50 text-orange-400 px-6 py-3 rounded-lg font-medium hover:border-orange-500 transition-all shadow-sm disabled:opacity-70"
             >
               {isGeneratingPitch ? (
                 <Sparkles size={18} className="animate-spin" />
@@ -251,87 +348,104 @@ const App = () => {
           </div>
 
           {aiPitch && (
-            <div className="max-w-2xl mx-auto mb-10 p-4 bg-white dark:bg-slate-800/50 border border-orange-200 dark:border-orange-900/30 rounded-xl shadow-sm text-left animate-fade-in-up relative overflow-hidden">
+            <div className="max-w-2xl mb-10 p-5 bg-slate-800/50 border border-orange-900/30 rounded-xl shadow-sm text-left animate-fade-in-up relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-orange-400 to-amber-500"></div>
-              <p className="text-slate-700 dark:text-slate-300 italic text-sm md:text-base pr-4 pl-2">
+              <p className="text-slate-300 italic text-sm md:text-base pr-4 pl-2 leading-relaxed">
                 "{aiPitch}"
               </p>
             </div>
           )}
 
-          <div className="flex justify-center gap-6 mt-4">
-            <a href="https://github.com/povvisal" target="_blank" rel="noreferrer" className="text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">
+          <div className="flex justify-start gap-6 mt-6">
+            <a href="https://github.com/povvisal" target="_blank" rel="noreferrer" className="text-slate-500 hover:text-white transition-colors">
               <Github size={24} />
             </a>
-            <a href="#" className="text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <a href="#" className="text-slate-500 hover:text-blue-400 transition-colors">
               <Linkedin size={24} />
             </a>
             <a href="mailto:P.visal6927@gmail.com" className="text-slate-500 hover:text-orange-500 transition-colors">
               <Mail size={24} />
             </a>
           </div>
-        </section>
+        </AnimatedSection>
 
-        <section id="about" className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
-          <div>
-            <h3 className="text-3xl font-bold mb-6 text-slate-900 dark:text-white">About Me</h3>
-            <p className="text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
-              I am a driven student pursuing a <strong className="text-slate-900 dark:text-white">B.S. in Digital Infrastructure</strong> with a major in <strong className="text-slate-900 dark:text-white">Cloud Infrastructure</strong>. I specialize in architecting robust systems, automating deployments, and diagnosing complex network configurations. I bridge the gap between development and operations through hands-on experience in AWS, Linux administration, and CI/CD methodologies.
-            </p>
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:border-orange-400/50 dark:hover:border-orange-500/50 hover:shadow-md transition-all duration-300 cursor-default">
-              <h4 className="text-xl font-bold mb-2 flex items-center gap-2 text-slate-900 dark:text-white">
-                <GraduationCap size={20} className="text-orange-500" /> Education
-              </h4>
-              <p className="font-semibold text-orange-600 dark:text-orange-500">American University of Phnom Penh (AUPP)</p>
-              <p className="text-sm mb-4 text-slate-500 dark:text-slate-400">Expected early 2027</p>
-              <div className="flex flex-wrap gap-2">
-                {["Cloud Architecture", "Linux Administration", "Networking", "Cybersecurity"].map(course => (
-                  <span key={course} className="text-xs font-mono bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded">
-                    {course}
-                  </span>
-                ))}
+        <AnimatedSection id="about">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
+            <div className="lg:col-span-7 xl:col-span-8">
+              <h3 className="text-3xl font-bold mb-6 text-white flex items-center gap-3">
+                About Me
+              </h3>
+              <div className="space-y-4 text-slate-400 text-lg leading-relaxed mb-8">
+                <p>
+                  Hi, I'm Visal! I'm currently a student pursuing a <strong className="text-white">B.S. in Digital Infrastructure</strong> at AUPP, with a heavy focus on all things Cloud. 
+                </p>
+                <p>
+                  Rather than just reading about tech, I love getting my hands dirty—whether that's architecting systems from scratch, automating deployments so developers can sleep better, or untangling complex network configs. 
+                </p>
+                <p>
+                  My goal is to bridge the gap between development and operations, bringing practical experience in <strong className="text-white">AWS, Linux administration, and CI/CD methodologies</strong> to the table.
+                </p>
+              </div>
+              
+              <div className="bg-slate-800/50 rounded-xl p-6 md:p-8 border border-slate-700/50 shadow-sm hover:border-orange-500/50 hover:shadow-md transition-all duration-300 cursor-default inline-block w-full max-w-xl">
+                <h4 className="text-xl font-bold mb-3 flex items-center gap-2 text-white">
+                  <GraduationCap size={20} className="text-orange-500" /> Education
+                </h4>
+                <p className="font-semibold text-orange-500 text-lg">American University of Phnom Penh (AUPP)</p>
+                <p className="text-sm mb-5 text-slate-400">Expected early 2027</p>
+                <div className="flex flex-wrap gap-2">
+                  {["Cloud Architecture", "Linux Administration", "Networking", "Cybersecurity"].map(course => (
+                    <span key={course} className="text-sm font-mono bg-slate-900/50 text-slate-300 px-3 py-1.5 rounded-md border border-slate-700">
+                      {course}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            <div className="lg:col-span-5 xl:col-span-4">
+              <div className="bg-slate-800/20 rounded-2xl p-6 border border-slate-800 h-full">
+                <h3 className="text-2xl font-bold mb-6 text-white flex items-center gap-2">
+                  <Award className="text-orange-500" /> AWS Credentials
+                </h3>
+                <p className="text-sm text-slate-400 mb-6">Industry-recognized certifications demonstrating hands-on cloud expertise.</p>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {awsBadges.map((badge, idx) => (
+                    <a 
+                      key={idx} 
+                      href={badge.url} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="group flex flex-col items-center p-4 bg-slate-800 border border-slate-700 rounded-xl shadow-sm hover:shadow-md hover:border-orange-500 transition-all duration-300 hover:-translate-y-1 text-center"
+                    >
+                      <img src={badge.imgSrc} alt={`AWS Academy Graduate - ${badge.name}`} className="w-16 h-16 md:w-20 md:h-20 object-contain mb-3 drop-shadow-sm group-hover:drop-shadow-md transition-all" />
+                      <span className="text-xs md:text-sm font-semibold text-slate-200">{badge.name}</span>
+                      <div className="mt-3 flex items-center text-[10px] md:text-xs text-orange-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                        Verify <ExternalLink size={12} className="ml-1" />
+                      </div>
+                    </a>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-          
-          <div>
-            <h4 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white flex items-center gap-2">
-              <Award className="text-orange-500" /> AWS Academy Credentials
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {awsBadges.map((badge, idx) => (
-                <a 
-                  key={idx} 
-                  href={badge.url} 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="group flex flex-col items-center p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-md hover:border-orange-500 dark:hover:border-orange-500 transition-all duration-300 hover:-translate-y-1 text-center"
-                >
-                  <img src={badge.imgSrc} alt={`AWS Academy Graduate - ${badge.name}`} className="w-28 h-28 object-contain mb-3 drop-shadow-sm group-hover:drop-shadow-md transition-all" />
-                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{badge.name}</span>
-                  <div className="mt-3 flex items-center text-xs text-orange-600 dark:text-orange-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                    Verify Badge <ExternalLink size={14} className="ml-1" />
-                  </div>
-                </a>
-              ))}
-            </div>
-          </div>
-        </section>
+        </AnimatedSection>
 
-        <section id="cli" className="max-w-5xl mx-auto w-full">
-          <div className="bg-slate-900 rounded-xl overflow-hidden shadow-2xl border border-slate-700 hover:border-orange-500/50 transition-colors duration-300 font-mono text-sm">
-            <div className="bg-slate-800 px-4 py-2 flex items-center gap-2 border-b border-slate-700">
-              <div className="flex gap-1.5">
+        <AnimatedSection id="cli" className="w-full">
+          <div className="bg-slate-900/80 rounded-xl overflow-hidden shadow-2xl border border-slate-700 hover:border-orange-500/50 transition-colors duration-300 font-mono text-sm max-w-4xl backdrop-blur-sm">
+            <div className="bg-slate-800/90 px-4 py-3 flex items-center gap-2 border-b border-slate-700">
+              <div className="flex gap-2">
                 <div className="w-3 h-3 rounded-full bg-red-500"></div>
                 <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
               </div>
-              <div className="mx-auto text-slate-400 text-xs flex items-center gap-2 font-sans">
+              <div className="ml-4 text-slate-400 text-xs flex items-center gap-2 font-sans font-medium tracking-wide">
                 <SquareTerminal size={14} /> visal@portfolio: ~
               </div>
             </div>
             
-            <div className="p-4 h-64 overflow-y-auto bg-slate-950 text-slate-300 flex flex-col gap-2">
+            <div className="p-5 h-72 overflow-y-auto bg-slate-950/80 text-slate-300 flex flex-col gap-2">
               {terminalHistory.map((item, idx) => (
                 <div key={idx}>
                   {item.command && (
@@ -339,12 +453,12 @@ const App = () => {
                       {item.command}
                     </div>
                   )}
-                  <div className="whitespace-pre-wrap text-emerald-400">{item.output}</div>
+                  <div className="whitespace-pre-wrap text-emerald-400 leading-relaxed">{item.output}</div>
                 </div>
               ))}
               <div ref={terminalEndRef} />
               
-              <form onSubmit={handleTerminalSubmit} className="flex items-center gap-2 mt-2">
+              <form onSubmit={handleTerminalSubmit} className="flex items-center gap-2 mt-3">
                 <span className="text-orange-400 shrink-0">visal@portfolio:~$</span>
                 <input 
                   type="text" 
@@ -358,71 +472,74 @@ const App = () => {
               </form>
             </div>
           </div>
-        </section>
+        </AnimatedSection>
 
-        <section id="tech">
-          <div className="text-center mb-10">
-            <h3 className="text-3xl font-bold mb-4 text-slate-900 dark:text-white">Technical Arsenal</h3>
-            <p className="max-w-2xl mx-auto text-slate-600 dark:text-slate-400">
+        <AnimatedSection id="tech">
+          <div className="text-left mb-10">
+            <h3 className="text-3xl font-bold mb-4 text-white">Technical Arsenal</h3>
+            <p className="max-w-2xl text-slate-400 text-lg">
               The core technologies and tools I leverage to build, deploy, and scale robust applications.
             </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {techStack.map((category, idx) => (
-              <div key={idx} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-orange-400/50 dark:hover:border-orange-500/50 hover:shadow-md transition-all duration-300">
-                <h4 className="text-lg font-bold mb-6 flex items-center gap-2 text-slate-900 dark:text-white">
+              <div key={idx} className="bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-700 shadow-sm hover:border-orange-500/50 hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-6 opacity-5 transform translate-x-4 -translate-y-4 group-hover:scale-110 group-hover:opacity-10 transition-all duration-500">
+                  {React.cloneElement(category.icon, { size: 100 })}
+                </div>
+                <h4 className="text-xl font-bold mb-6 flex items-center gap-3 text-white relative z-10">
                   {category.icon} {category.category}
                 </h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 relative z-10">
                   {category.items.map((tool, i) => (
-                    <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-700/50 hover:bg-orange-50 dark:hover:bg-slate-700 transition-all duration-300 border border-transparent hover:border-orange-400/60 dark:hover:border-orange-500/60 hover:shadow-sm cursor-pointer hover:-translate-y-0.5">
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/50 hover:bg-slate-700 transition-all duration-300 border border-slate-700/50 hover:border-orange-500/60 hover:shadow-sm cursor-pointer hover:-translate-y-1">
                       {tool.icon ? (
                         <img 
                           src={tool.icon} 
                           alt={tool.name} 
-                          className={`w-6 h-6 object-contain ${tool.invertDark && isDarkMode ? 'filter invert brightness-0' : ''}`} 
+                          className={`w-6 h-6 object-contain ${tool.invertDark ? 'filter invert brightness-0' : ''}`} 
                         />
                       ) : (
                         tool.fallback
                       )}
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{tool.name}</span>
+                      <span className="text-sm font-medium text-slate-300">{tool.name}</span>
                     </div>
                   ))}
                 </div>
               </div>
             ))}
           </div>
-        </section>
+        </AnimatedSection>
 
-        <section id="projects">
-          <div className="mb-10 text-center">
-            <h3 className="text-3xl font-bold mb-4 text-slate-900 dark:text-white">Featured Architecture</h3>
-            <p className="max-w-2xl mx-auto text-slate-600 dark:text-slate-400">
+        <AnimatedSection id="projects">
+          <div className="mb-10 text-left">
+            <h3 className="text-3xl font-bold mb-4 text-white">Featured Architecture</h3>
+            <p className="max-w-2xl text-slate-400 text-lg">
               Interactive breakdown of my core infrastructure project, demonstrating DevSecOps, IaC, and Containerization.
             </p>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm transition-all duration-300 hover:border-orange-400/50 dark:hover:border-orange-500/50 hover:shadow-md">
+          <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-sm transition-all duration-300 hover:border-orange-500/50 hover:shadow-md">
             <div className="p-8 md:p-10">
               <div className="flex justify-between items-start flex-wrap gap-4 mb-6">
                 <div>
-                  <span className="text-orange-600 dark:text-orange-500 text-sm font-mono font-bold tracking-wider uppercase mb-2 block">Enterprise Deployment Strategy</span>
-                  <h4 className="text-2xl font-bold text-slate-900 dark:text-white">CI/CD Pipeline for Containerised Web App on AWS</h4>
+                  <span className="text-orange-500 text-sm font-mono font-bold tracking-wider uppercase mb-3 block">Enterprise Deployment Strategy</span>
+                  <h4 className="text-2xl md:text-3xl font-bold text-white">CI/CD Pipeline for Containerised Web App on AWS</h4>
                 </div>
-                <div className="flex gap-3">
-                   <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/amazonwebservices/amazonwebservices-original-wordmark.svg" alt="AWS" className={`w-10 h-10 object-contain ${isDarkMode ? 'filter invert brightness-0' : ''}`} />
+                <div className="flex gap-4 bg-slate-900/50 p-3 rounded-xl border border-slate-700">
+                   <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/amazonwebservices/amazonwebservices-original-wordmark.svg" alt="AWS" className="w-10 h-10 object-contain filter invert brightness-0" />
                    <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/docker/docker-original.svg" alt="Docker" className="w-10 h-10 object-contain" />
                 </div>
               </div>
               
-              <p className="text-slate-600 dark:text-slate-300 mb-8 text-lg">
+              <p className="text-slate-300 mb-8 text-lg leading-relaxed max-w-4xl">
                 An end-to-end automated deployment pipeline integrating security scans, infrastructure as code, and container orchestration to deliver a highly available web application on Amazon Web Services.
               </p>
 
-              <div className="flex flex-wrap gap-2 mb-8">
+              <div className="flex flex-wrap gap-3 mb-10">
                 {["Jenkins", "SonarQube", "Trivy", "Terraform", "AWS S3 & DynamoDB"].map(tag => (
-                  <span key={tag} className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-3 py-1 text-sm rounded-full font-mono border border-slate-200 dark:border-slate-600">
+                  <span key={tag} className="bg-slate-900/50 text-slate-300 px-4 py-1.5 text-sm rounded-full font-mono border border-slate-600">
                     {tag}
                   </span>
                 ))}
@@ -430,7 +547,7 @@ const App = () => {
 
               <button 
                 onClick={() => setIsProjectExpanded(!isProjectExpanded)} 
-                className="flex items-center gap-2 text-orange-600 dark:text-orange-500 hover:text-orange-700 dark:hover:text-orange-400 transition-colors font-semibold focus:outline-none bg-orange-50 dark:bg-orange-500/10 px-4 py-2 rounded-lg"
+                className="inline-flex items-center gap-2 text-orange-500 hover:text-orange-400 transition-colors font-semibold focus:outline-none bg-orange-500/10 px-6 py-3 rounded-xl border border-orange-500/20 hover:border-orange-500/50"
               >
                 {isProjectExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />} 
                 {isProjectExpanded ? 'Hide Architecture Details' : 'Explore Architecture Details'}
@@ -438,29 +555,29 @@ const App = () => {
             </div>
 
             <div className={`transition-all duration-500 ease-in-out ${isProjectExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
-              <div className="bg-slate-50 dark:bg-slate-900/50 p-8 md:p-10 border-t border-slate-200 dark:border-slate-700">
+              <div className="bg-slate-900/50 p-8 md:p-10 border-t border-slate-700">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  <div>
-                    <h5 className="font-bold mb-3 flex items-center gap-2 text-slate-900 dark:text-white">
-                      <Terminal size={18} className="text-orange-500" /> Automated DevSecOps
+                  <div className="bg-slate-800 p-6 rounded-xl border border-slate-700/50">
+                    <h5 className="font-bold mb-4 flex items-center gap-3 text-white text-lg">
+                      <div className="p-2 bg-orange-500/10 rounded-lg text-orange-500"><Terminal size={20} /></div> Automated DevSecOps
                     </h5>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    <p className="text-sm text-slate-400 leading-relaxed">
                       Jenkins pipeline triggered on main pushes. Integrates SonarQube quality gates for code analysis and Trivy security scans for both source code and container images, ensuring secure deployments.
                     </p>
                   </div>
-                  <div>
-                    <h5 className="font-bold mb-3 flex items-center gap-2 text-slate-900 dark:text-white">
-                      <Server size={18} className="text-orange-500" /> Secure IaC
+                  <div className="bg-slate-800 p-6 rounded-xl border border-slate-700/50">
+                    <h5 className="font-bold mb-4 flex items-center gap-3 text-white text-lg">
+                      <div className="p-2 bg-orange-500/10 rounded-lg text-orange-500"><Server size={20} /></div> Secure IaC
                     </h5>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    <p className="text-sm text-slate-400 leading-relaxed">
                       Utilized Terraform to provision least-privilege EC2 instances. Implemented remote state management and state locking utilizing AWS S3 and DynamoDB to prevent configuration drift.
                     </p>
                   </div>
-                  <div>
-                    <h5 className="font-bold mb-3 flex items-center gap-2 text-slate-900 dark:text-white">
-                      <Database size={18} className="text-orange-500" /> Dockerized Deployment
+                  <div className="bg-slate-800 p-6 rounded-xl border border-slate-700/50">
+                    <h5 className="font-bold mb-4 flex items-center gap-3 text-white text-lg">
+                      <div className="p-2 bg-orange-500/10 rounded-lg text-orange-500"><Database size={20} /></div> Dockerized Deployment
                     </h5>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    <p className="text-sm text-slate-400 leading-relaxed">
                       Automates the build process and DockerHub push. Executes multi-node deployments with verified SSH readiness checks and automated HTTP health checks post-deployment.
                     </p>
                   </div>
@@ -468,106 +585,103 @@ const App = () => {
               </div>
             </div>
           </div>
-        </section>
+        </AnimatedSection>
 
-        <section id="experience">
-          <div className="mb-12 text-center">
-            <h3 className="text-3xl font-bold mb-4 text-slate-900 dark:text-white">Work Experience</h3>
-            <p className="max-w-2xl mx-auto text-slate-600 dark:text-slate-400">
+        <AnimatedSection id="experience">
+          <div className="mb-12 text-left">
+            <h3 className="text-3xl font-bold mb-4 text-white">Work Experience</h3>
+            <p className="max-w-2xl text-slate-400 text-lg">
                A history of roles strengthening my problem-solving, communication, and technical foundations.
             </p>
           </div>
 
-          <div className="max-w-4xl mx-auto relative border-l border-slate-200 dark:border-slate-700 ml-4 md:ml-auto space-y-12 pb-8">
+          <div className="relative border-l-2 border-slate-700 ml-4 space-y-12 pb-8 max-w-4xl">
             
-            <div className="relative pl-8 md:pl-10">
-              <div className="absolute -left-5 bg-white dark:bg-slate-900 border-4 border-orange-100 dark:border-orange-900/30 p-2 rounded-full">
+            <div className="relative pl-8 md:pl-12">
+              <div className="absolute -left-[17px] bg-slate-900 border-4 border-orange-900/50 p-2 rounded-full">
                 <Briefcase size={20} className="text-orange-500" />
               </div>
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-orange-400/50 dark:hover:border-orange-500/50 hover:shadow-md transition-all duration-300">
-                <span className="inline-block bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-xs font-bold px-3 py-1 rounded-full mb-3">2023 - Present</span>
-                <h4 className="text-xl font-bold text-slate-900 dark:text-white">Food Tour Guide</h4>
-                <p className="text-orange-600 dark:text-orange-500 font-medium mb-3 text-sm">Urban Forage</p>
-                <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+              <div className="bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-700 shadow-sm hover:border-orange-500/50 hover:shadow-md transition-all duration-300">
+                <span className="inline-block bg-slate-700 text-slate-300 text-xs font-bold px-3 py-1.5 rounded-full mb-4 border border-slate-600">2023 - Present</span>
+                <h4 className="text-xl font-bold text-white">Food Tour Guide</h4>
+                <p className="text-orange-500 font-medium mb-4 text-sm">Urban Forage</p>
+                <p className="text-slate-400 text-sm leading-relaxed">
                   Led cultural food tours for international guests, providing English narratives on Khmer cuisine. Strengthened cross-cultural communication, adaptability, and public speaking skills.
                 </p>
               </div>
             </div>
 
-            <div className="relative pl-8 md:pl-10">
-               <div className="absolute -left-5 bg-white dark:bg-slate-900 border-4 border-slate-100 dark:border-slate-800 p-2 rounded-full">
-                <Briefcase size={20} className="text-slate-400" />
+            <div className="relative pl-8 md:pl-12">
+               <div className="absolute -left-[17px] bg-slate-900 border-4 border-slate-800 p-2 rounded-full">
+                <Briefcase size={20} className="text-slate-500" />
               </div>
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-orange-400/50 dark:hover:border-orange-500/50 hover:shadow-md transition-all duration-300">
-                <span className="inline-block bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-xs font-bold px-3 py-1 rounded-full mb-3">2022 - 2023</span>
-                <h4 className="text-xl font-bold text-slate-900 dark:text-white">English Tutor</h4>
-                <p className="text-orange-600 dark:text-orange-500 font-medium mb-3 text-sm">Phum Yerng Education Center</p>
-                <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+              <div className="bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-700 shadow-sm hover:border-orange-500/50 hover:shadow-md transition-all duration-300">
+                <span className="inline-block bg-slate-700 text-slate-300 text-xs font-bold px-3 py-1.5 rounded-full mb-4 border border-slate-600">2022 - 2023</span>
+                <h4 className="text-xl font-bold text-white">English Tutor</h4>
+                <p className="text-orange-500 font-medium mb-4 text-sm">Phum Yerng Education Center</p>
+                <p className="text-slate-400 text-sm leading-relaxed">
                   Tutored 30 young high school learners. Adapted explanations of fundamental grammar concepts and speaking practices to suit diverse learning speeds.
                 </p>
               </div>
             </div>
 
-            <div className="relative pl-8 md:pl-10">
-              <div className="absolute -left-5 bg-white dark:bg-slate-900 border-4 border-slate-100 dark:border-slate-800 p-2 rounded-full">
-                <Briefcase size={20} className="text-slate-400" />
+            <div className="relative pl-8 md:pl-12">
+              <div className="absolute -left-[17px] bg-slate-900 border-4 border-slate-800 p-2 rounded-full">
+                <Briefcase size={20} className="text-slate-500" />
               </div>
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-orange-400/50 dark:hover:border-orange-500/50 hover:shadow-md transition-all duration-300">
-                <span className="inline-block bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-xs font-bold px-3 py-1 rounded-full mb-3">2021 - 2022</span>
-                <h4 className="text-xl font-bold text-slate-900 dark:text-white">Technical Support & Event Coordination</h4>
-                <p className="text-orange-600 dark:text-orange-500 font-medium mb-3 text-sm">Preah Mlou High School</p>
-                <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+              <div className="bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-700 shadow-sm hover:border-orange-500/50 hover:shadow-md transition-all duration-300">
+                <span className="inline-block bg-slate-700 text-slate-300 text-xs font-bold px-3 py-1.5 rounded-full mb-4 border border-slate-600">2021 - 2022</span>
+                <h4 className="text-xl font-bold text-white">Technical Support & Event Coordination</h4>
+                <p className="text-orange-500 font-medium mb-4 text-sm">Preah Mlou High School</p>
+                <p className="text-slate-400 text-sm leading-relaxed">
                   Provided hands-on technical assistance for school events. Managed projector setup, physical network cabling, and troubleshot connectivity issues on the fly.
                 </p>
               </div>
             </div>
 
           </div>
-        </section>
+        </AnimatedSection>
 
-        <section id="github">
-          <div className="text-center mb-10">
-            <h3 className="text-3xl font-bold mb-4 flex items-center justify-center gap-3 text-slate-900 dark:text-white">
+        <AnimatedSection id="github">
+          <div className="text-left mb-10">
+            <h3 className="text-3xl font-bold mb-4 flex items-center justify-start gap-3 text-white">
               <Github className="text-orange-500" size={32} /> Code & Contributions
             </h3>
-            <p className="max-w-2xl mx-auto text-slate-600 dark:text-slate-400">
+            <p className="max-w-2xl text-slate-400 text-lg">
               A live look into my open-source activity and daily coding habits.
             </p>
           </div>
 
-          <div className="max-w-5xl mx-auto space-y-6">
-            <div className="p-4 bg-white dark:bg-[#1a1b26] rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden hover:border-orange-400/50 dark:hover:border-orange-500/50 hover:shadow-md transition-all duration-300">
-              <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4 px-2">Contribution Calendar</h4>
-              <div className="bg-white rounded-xl p-2 overflow-x-auto border border-slate-100 dark:border-slate-800 flex justify-center">
+          <div className="max-w-5xl space-y-6">
+            <div className="p-6 bg-[#1a1b26] rounded-2xl shadow-sm border border-slate-700 overflow-hidden hover:border-orange-500/50 hover:shadow-md transition-all duration-300">
+              <h4 className="text-sm font-bold text-slate-400 mb-6 px-2 tracking-wide uppercase">Contribution Calendar</h4>
+              <div className="bg-slate-900/50 rounded-xl p-4 overflow-x-auto border border-slate-800 flex justify-start">
                  <img src="https://ghchart.rshah.org/ea580c/poVvisal" alt="GitHub Contributions Chart" className="min-w-[600px] max-w-full" />
               </div>
             </div>
 
-            <div className="p-4 bg-white dark:bg-[#1a1b26] rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden hover:border-orange-400/50 dark:hover:border-orange-500/50 hover:shadow-md transition-all duration-300">
-               <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4 px-2">Contribution Snake</h4>
+            <div className="p-6 bg-[#1a1b26] rounded-2xl shadow-sm border border-slate-700 overflow-hidden hover:border-orange-500/50 hover:shadow-md transition-all duration-300">
+               <h4 className="text-sm font-bold text-slate-400 mb-6 px-2 tracking-wide uppercase">Contribution Snake</h4>
                <img 
-                  src={isDarkMode 
-                    ? "https://raw.githubusercontent.com/poVvisal/poVvisal/output/github-snake-dark.svg" 
-                    : "https://raw.githubusercontent.com/poVvisal/poVvisal/output/github-snake.svg"
-                  } 
+                  src="https://raw.githubusercontent.com/poVvisal/poVvisal/output/github-snake-dark.svg"
                   alt="GitHub Snake Animation" 
-                  className="w-full object-contain mix-blend-normal"
+                  className="w-full object-contain mix-blend-normal opacity-90 hover:opacity-100 transition-opacity"
                />
             </div>
           </div>
-        </section>
+        </AnimatedSection>
       </main>
 
-      <footer className="mt-12 md:mt-16 border-t border-slate-200 dark:border-slate-800 pt-8 pb-4">
+      <footer className="relative z-10 mt-16 border-t border-slate-800 pt-8 pb-8 bg-slate-900/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-slate-500 dark:text-slate-400 text-sm">
+          <p className="text-slate-500 text-sm font-medium">
             &copy; {new Date().getFullYear()} Pov Visal. Built with React & Tailwind.
           </p>
-          <div className="flex space-x-6 text-slate-400 dark:text-slate-500">
-            <a href="https://github.com/povvisal" target="_blank" rel="noreferrer" className="hover:text-slate-900 dark:hover:text-white transition-colors">
+          <div className="flex space-x-6 text-slate-500">
+            <a href="https://github.com/povvisal" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
               <Github size={20} />
             </a>
-            <a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <a href="#" className="hover:text-blue-400 transition-colors">
               <Linkedin size={20} />
             </a>
           </div>
