@@ -360,7 +360,7 @@ Swap:              0           0           0`;
             <a href="https://github.com/povvisal" target="_blank" rel="noreferrer" className="text-slate-500 hover:text-white transition-colors">
               <Github size={24} />
             </a>
-            <a href="#" className="text-slate-500 hover:text-blue-400 transition-colors">
+            <a href="https://www.linkedin.com/in/visal-pov-891444296/" target="_blank" rel="noreferrer" className="text-slate-500 hover:text-blue-400 transition-colors">
               <Linkedin size={24} />
             </a>
             <a href="mailto:P.visal6927@gmail.com" className="text-slate-500 hover:text-orange-500 transition-colors">
