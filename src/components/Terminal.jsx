@@ -185,7 +185,6 @@ Swap:              0           0           0`;
             onChange={(e) => setTerminalInput(e.target.value)}
             className="bg-transparent border-none outline-none flex-1 text-slate-200 w-full"
             autoComplete="off"
-            autoFocus
             spellCheck="false"
           />
         </form>

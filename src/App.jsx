@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { NavBar } from './components/NavBar';
 import { Hero } from './components/Hero';
 import { About } from './components/About';
 import { TechStack } from './components/TechStack';
 import { Projects } from './components/Projects';
 import { Experience } from './components/Experience';
+import { ContactForm } from './components/emailjs';
 import { GithubStats } from './components/GithubStats';
 import { Footer } from './components/Footer';
 import { TerminalComponent } from './components/Terminal';
@@ -48,9 +49,10 @@ const App = () => {
         <Hero aiPitch={aiPitch} isGeneratingPitch={isGeneratingPitch} handleGeneratePitch={handleGeneratePitch} />
         <About />
         <TerminalComponent />
-        <TechStack />
         <Projects />
         <Experience />
+        <TechStack />
+        <ContactForm />
         <GithubStats />
       </main>
 

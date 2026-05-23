@@ -1,8 +1,51 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Briefcase } from 'lucide-react';
 import { AnimatedSection } from './AnimatedSection';
 
 export const Experience = () => {
+  useEffect(() => {
+    const section = document.getElementById('experience');
+
+    if (!section) {
+      return undefined;
+    }
+
+    let frameId = 0;
+
+    const updateRailProgress = () => {
+      frameId = 0;
+
+      const rect = section.getBoundingClientRect();
+      const viewportHeight = window.innerHeight || 1;
+      const totalTravel = viewportHeight + rect.height;
+      const rawProgress = (viewportHeight - rect.top) / totalTravel;
+      const progress = Math.max(0, Math.min(1, Math.pow(Math.max(rawProgress, 0), 0.78)));
+
+      section.style.setProperty('--experience-progress', progress.toFixed(4));
+    };
+
+    const requestProgressUpdate = () => {
+      if (frameId) {
+        return;
+      }
+
+      frameId = window.requestAnimationFrame(updateRailProgress);
+    };
+
+    updateRailProgress();
+    window.addEventListener('scroll', requestProgressUpdate, { passive: true });
+    window.addEventListener('resize', requestProgressUpdate);
+
+    return () => {
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      window.removeEventListener('scroll', requestProgressUpdate);
+      window.removeEventListener('resize', requestProgressUpdate);
+    };
+  }, []);
+
   return (
     <AnimatedSection id="experience">
       <div className="mb-12 text-left">
@@ -12,10 +55,18 @@ export const Experience = () => {
         </p>
       </div>
 
-      <div className="relative border-l-2 border-slate-700 ml-4 space-y-12 pb-8 max-w-4xl">
-        
-        <div className="relative pl-8 md:pl-12">
-          <div className="absolute -left-[17px] bg-slate-900 border-4 border-orange-900/50 p-2 rounded-full">
+      <div className="experience-timeline relative ml-4 max-w-4xl space-y-12 pb-8 pl-8 md:pl-12">
+        <div aria-hidden="true" className="experience-timeline__rail">
+          <span className="experience-timeline__track" />
+          <span className="experience-timeline__fill" />
+          <span className="experience-timeline__scan" />
+          <span className="experience-timeline__orb experience-timeline__orb--one" />
+          <span className="experience-timeline__orb experience-timeline__orb--two" />
+          <span className="experience-timeline__orb experience-timeline__orb--three" />
+        </div>
+
+        <div className="relative">
+          <div className="absolute -left-[26px] md:-left-[30px] top-1 bg-slate-900 border-[5px] border-orange-500/35 p-2 rounded-full shadow-[0_0_24px_rgba(249,115,22,0.35)] ring-4 ring-orange-500/10 animate-pulse">
             <Briefcase size={20} className="text-orange-500" />
           </div>
           <div className="bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-700 shadow-sm hover:border-orange-500/50 hover:shadow-md transition-all duration-300">
@@ -28,8 +79,8 @@ export const Experience = () => {
           </div>
         </div>
 
-        <div className="relative pl-8 md:pl-12">
-           <div className="absolute -left-[17px] bg-slate-900 border-4 border-slate-800 p-2 rounded-full">
+          <div className="relative">
+            <div className="absolute -left-[26px] md:-left-[30px] top-1 bg-slate-900 border-[5px] border-slate-700 p-2 rounded-full shadow-[0_0_18px_rgba(71,85,105,0.25)]">
             <Briefcase size={20} className="text-slate-500" />
           </div>
           <div className="bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-700 shadow-sm hover:border-orange-500/50 hover:shadow-md transition-all duration-300">
@@ -42,8 +93,8 @@ export const Experience = () => {
           </div>
         </div>
 
-        <div className="relative pl-8 md:pl-12">
-          <div className="absolute -left-[17px] bg-slate-900 border-4 border-slate-800 p-2 rounded-full">
+        <div className="relative">
+          <div className="absolute -left-[26px] md:-left-[30px] top-1 bg-slate-900 border-[5px] border-slate-700 p-2 rounded-full shadow-[0_0_18px_rgba(71,85,105,0.25)]">
             <Briefcase size={20} className="text-slate-500" />
           </div>
           <div className="bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-700 shadow-sm hover:border-orange-500/50 hover:shadow-md transition-all duration-300">

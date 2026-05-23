@@ -1,3 +1,193 @@
 @import "tailwindcss";
 
 @source "../src/**/*.{js,jsx}"; /* ensures Tailwind scans your JSX */
+
+.experience-timeline {
+	position: relative;
+}
+
+.experience-timeline__rail {
+	position: absolute;
+	inset-block: 0;
+	left: 0;
+	width: 18px;
+	pointer-events: none;
+}
+
+.experience-timeline__track,
+.experience-timeline__fill {
+	position: absolute;
+	left: 50%;
+	top: 0;
+	bottom: 0;
+	width: 5px;
+	transform: translateX(-50%);
+	border-radius: 9999px;
+	transform-origin: top center;
+}
+
+.experience-timeline__track {
+	background: rgba(148, 163, 184, 0.14);
+	box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+}
+
+.experience-timeline__fill {
+	background: linear-gradient(180deg, rgba(253, 186, 116, 0.9) 0%, #fb923c 16%, #f97316 50%, #ea580c 84%, rgba(253, 186, 116, 0.9) 100%);
+	box-shadow: 0 0 30px rgba(249, 115, 22, 0.45), inset 0 0 12px rgba(255, 255, 255, 0.14);
+	height: calc(var(--experience-progress, 0) * 100%);
+}
+
+.experience-timeline__fill::before,
+.experience-timeline__fill::after {
+	content: '';
+	position: absolute;
+	left: 50%;
+	top: 0;
+	border-radius: 9999px;
+	transform: translate(-50%, -35%);
+	animation: experience-head-pulse 1.1s ease-in-out infinite;
+}
+
+.experience-timeline__fill::before {
+	width: 26px;
+	height: 26px;
+	background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, rgba(249, 115, 22, 0.32) 38%, rgba(249, 115, 22, 0) 72%);
+	filter: blur(3px);
+	opacity: 0.95;
+	transform: translate(-50%, -40%);
+}
+
+.experience-timeline__fill::after {
+	width: 16px;
+	height: 16px;
+	transform: translate(-50%, -35%);
+	background: rgba(255, 255, 255, 0.85);
+	box-shadow: 0 0 18px rgba(249, 115, 22, 1), 0 0 38px rgba(249, 115, 22, 0.6);
+}
+
+.experience-timeline__scan {
+	position: absolute;
+	left: 50%;
+	top: calc(var(--experience-progress, 0) * 100%);
+	width: 12px;
+	height: 12px;
+	transform: translate(-50%, -50%);
+	border-radius: 9999px;
+	background: rgba(255, 255, 255, 0.92);
+	box-shadow: 0 0 18px rgba(249, 115, 22, 0.95), 0 0 34px rgba(249, 115, 22, 0.5);
+	filter: blur(0.2px);
+	opacity: 0.95;
+	animation: experience-scan-pulse 1.05s ease-in-out infinite;
+}
+
+.experience-timeline__scan::before {
+	content: '';
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: 8px;
+	height: 30px;
+	transform: translate(-50%, -80%);
+	border-radius: 9999px;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(251, 146, 60, 0.95) 30%, rgba(249, 115, 22, 0.45) 62%, rgba(249, 115, 22, 0) 100%);
+	filter: blur(1.2px);
+	box-shadow: 0 0 20px rgba(249, 115, 22, 0.55);
+	opacity: 0.9;
+	transform-origin: center bottom;
+	animation: experience-streak-fade 1.05s ease-in-out infinite;
+	z-index: -1;
+}
+
+.experience-timeline__orb {
+	position: absolute;
+	left: 50%;
+	width: 9px;
+	height: 9px;
+	transform: translateX(-50%);
+	border-radius: 9999px;
+	background: rgba(251, 146, 60, 0.95);
+	box-shadow: 0 0 18px rgba(249, 115, 22, 0.8);
+}
+
+.experience-timeline__orb--one {
+	top: 8%;
+	animation: experience-orb-drift 4.5s ease-in-out infinite alternate;
+}
+
+.experience-timeline__orb--two {
+	top: 42%;
+	opacity: 0.85;
+	animation: experience-orb-drift 5.6s ease-in-out infinite alternate-reverse;
+}
+
+.experience-timeline__orb--three {
+	top: 76%;
+	animation: experience-orb-drift 4.9s ease-in-out infinite alternate;
+}
+
+@keyframes experience-scan-pulse {
+	0% {
+		transform: translate(-50%, -50%) scale(0.82);
+		opacity: 0.6;
+	}
+
+	50% {
+		transform: translate(-50%, -50%) scale(1.35);
+		opacity: 1;
+	}
+
+	100% {
+		transform: translate(-50%, -50%) scale(0.86);
+		opacity: 0.72;
+	}
+}
+
+@keyframes experience-head-pulse {
+	0% {
+		transform: translate(-50%, -35%) scale(0.88);
+		opacity: 0.72;
+	}
+
+	50% {
+		transform: translate(-50%, -35%) scale(1.16);
+		opacity: 1;
+	}
+
+	100% {
+		transform: translate(-50%, -35%) scale(0.92);
+		opacity: 0.8;
+	}
+}
+
+@keyframes experience-streak-fade {
+	0% {
+		transform: translate(-50%, -80%) scaleY(0.7);
+		opacity: 0.55;
+	}
+
+	50% {
+		transform: translate(-50%, -80%) scaleY(1.12);
+		opacity: 0.95;
+	}
+
+	100% {
+		transform: translate(-50%, -80%) scaleY(0.82);
+		opacity: 0.62;
+	}
+}
+
+@keyframes experience-orb-drift {
+	0% {
+		transform: translateX(-50%) translateY(-8px) scale(0.92);
+		opacity: 0.65;
+	}
+
+	50% {
+		opacity: 1;
+	}
+
+	100% {
+		transform: translateX(-50%) translateY(8px) scale(1.08);
+		opacity: 0.78;
+	}
+}
