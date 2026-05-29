@@ -5,21 +5,31 @@ import { fetchGeminiResponse } from '../utils/gemini';
 export const TerminalComponent = () => {
   const [terminalInput, setTerminalInput] = useState('');
   const [terminalHistory, setTerminalHistory] = useState([
-    { command: '', output: 'Welcome to PV-SH v1.0.0.\nType "help" to see available commands.' }
+    { command: '', output: 'Welcome to PVS Terminal.\nType "help" to see available commands.' }
   ]);
   const terminalScrollRef = useRef(null);
   const terminalEndRef = useRef(null);
+  const tiltRef = useRef(null);
 
-  // Auto-scroll terminal to bottom
+  // Parallax Tilt Effect
   useEffect(() => {
-    const terminalContainer = terminalScrollRef.current;
+    const handleMouseMove = (e) => {
+      if (!tiltRef.current) return;
+      const { innerWidth, innerHeight } = window;
+      const x = (e.clientX / innerWidth - 0.5) * 15; // Max tilt 15deg
+      const y = (e.clientY / innerHeight - 0.5) * -15;
+      tiltRef.current.style.transform = `perspective(1000px) rotateY(${x}deg) rotateX(${y}deg) translateZ(10px)`;
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
-    if (terminalContainer) {
-      terminalContainer.scrollTop = terminalContainer.scrollHeight;
-      return;
+  useEffect(() => {
+    if (terminalScrollRef.current) {
+      terminalScrollRef.current.scrollTop = terminalScrollRef.current.scrollHeight;
+    } else {
+      terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [terminalHistory]);
 
   const handleTerminalSubmit = async (e) => {
@@ -28,17 +38,15 @@ export const TerminalComponent = () => {
 
     const rawInput = terminalInput.trim();
     const cmd = rawInput.toLowerCase();
-    
+
+    // AI ask command
     if (cmd.startsWith('ask ') || cmd.startsWith('ask ✨')) {
       const query = rawInput.replace(/^ask ✨?\s*/i, '');
-      const currentInput = terminalInput; 
+      const currentInput = terminalInput;
       setTerminalInput('');
-      setTerminalHistory(prev => [
-        ...prev, 
-        { command: `visal@info:~$ ${currentInput}`, output: '✨ Consulting the cloud oracle...' }
-      ]);
+      setTerminalHistory(prev => [...prev, { command: `visal@info:~$ ${currentInput}`, output: '✨ Establishing secure uplink to Gemini Oracle...' }]);
 
-      const sysPrompt = "You are a helpful AI assistant built directly into Pov Visal's interactive portfolio terminal. You must keep your answers concise, technical but friendly, and strictly plain text suitable for a Linux CLI (NO markdown, bolding, or lists). Answer the user's query.";
+      const sysPrompt = "You are a highly advanced AI core built into Visal's deep-space terminal. Answer concisely, technically. Strictly plain text suitable for a Linux CLI.";
       const reply = await fetchGeminiResponse(query, sysPrompt);
 
       setTerminalHistory(prev => {
@@ -51,6 +59,7 @@ export const TerminalComponent = () => {
 
     let output = '';
 
+    // Basic shell-like commands (restored from previous version)
     if (cmd.startsWith('cd ')) {
       output = `bash: cd: restricted shell, changing to ${rawInput.substring(3)} disabled.`;
     } else if (cmd === 'cd') {
@@ -60,24 +69,7 @@ export const TerminalComponent = () => {
     } else {
       switch (cmd) {
         case 'help':
-          output = `Available commands:
-  help          - Show this message
-  whoami        - Display current user
-  pwd           - Print working directory
-  ls            - List directory contents
-  cd            - Change directory
-  date          - Print system date and time
-  uptime        - Tell how long the system has been running
-  uname -a      - Print system information
-  df -h         - Report file system disk space usage
-  free -m       - Display amount of free and used memory
-  history       - Display command history
-  echo [text]   - Print text to terminal
-  cat [file]    - Read file (try: cat about.txt, cat skills.sh)
-  aws s3 ls     - List AWS buckets
-  get resume    - Download my resume (PDF)
-  ask [query]   - Ask the AI a question ✨
-  clear         - Clear terminal window`;
+          output = `Available commands:\n  help          - Show this message\n  whoami        - Display current user\n  pwd           - Print working directory\n  ls            - List directory contents\n  cd            - Change directory\n  date          - Print system date and time\n  uptime        - Tell how long the system has been running\n  uname -a      - Print system information\n  df -h         - Report file system disk space usage\n  free -m       - Display amount of free and used memory\n  history       - Display command history\n  echo [text]   - Print text to terminal\n  cat [file]    - Read file (try: cat about.txt, cat skills.sh)\n  aws s3 ls     - List AWS buckets\n  get resume    - Download my resume (PDF)\n  ask [query]   - Ask the AI a question ✨\n  clear         - Clear terminal window`;
           break;
         case 'whoami':
           output = 'povvisal - Junior Cloud Infrastructure Engineer';
@@ -88,13 +80,7 @@ export const TerminalComponent = () => {
         case 'ls':
         case 'ls -la':
         case 'll':
-          output = `drwxr-xr-x 4 povvisal povvisal 4096 May 21 10:00 .
-drwxr-xr-x 3 root     root     4096 May 21 09:59 ..
--rw-r--r-- 1 povvisal povvisal 1024 May 21 10:00 about.txt
--rwxr-xr-x 1 povvisal povvisal 4096 May 21 10:00 skills.sh
--rw-r--r-- 1 povvisal povvisal 2048 May 21 10:00 resume.pdf
-drwxr-xr-x 2 povvisal povvisal 4096 May 21 10:00 projects
-drwxr-xr-x 2 povvisal povvisal 4096 May 21 10:00 .aws`;
+          output = `drwxr-xr-x 4 povvisal povvisal 4096 May 21 10:00 .\ndrwxr-xr-x 3 root     root     4096 May 21 09:59 ..\n-rw-r--r-- 1 povvisal povvisal 1024 May 21 10:00 about.txt\n-rwxr-xr-x 1 povvisal povvisal 4096 May 21 10:00 skills.sh\n-rw-r--r-- 1 povvisal povvisal 2048 May 21 10:00 resume.pdf\ndrwxr-xr-x 2 povvisal povvisal 4096 May 21 10:00 projects\ndrwxr-xr-x 2 povvisal povvisal 4096 May 21 10:00 .aws`;
           break;
         case 'date':
           output = new Date().toString();
@@ -106,13 +92,10 @@ drwxr-xr-x 2 povvisal povvisal 4096 May 21 10:00 .aws`;
           output = 'Linux aws-portfolio-node 6.1.85-99.169.amzn2023.x86_64 #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux';
           break;
         case 'df -h':
-          output = `Filesystem      Size  Used Avail Use% Mounted on
-/dev/nvme0n1p1   20G  8.4G   12G  42% /`;
+          output = `Filesystem      Size  Used Avail Use% Mounted on\n/dev/nvme0n1p1   20G  8.4G   12G  42% /`;
           break;
         case 'free -m':
-          output = `               total        used        free      shared  buff/cache   available
-Mem:            1984         512         420          10        1052        1300
-Swap:              0           0           0`;
+          output = `               total        used        free      shared  buff/cache   available\nMem:            1984         512         420          10        1052        1300\nSwap:              0           0           0`;
           break;
         case 'history':
           output = terminalHistory.map((item, index) => `  ${index + 1}  ${item.command.replace('visal@info:~$ ', '')}`).join('\n');
@@ -130,10 +113,14 @@ Swap:              0           0           0`;
         case 'get resume':
         case 'wget resume.pdf':
           output = 'Resolving host...\nConnecting to server... connected.\nHTTP request sent, awaiting response... 200 OK\nSaving to: ‘resume.pdf’\n\nDownload triggered successfully!';
-          const link = document.createElement('a');
-          link.href = '/resume.pdf'; 
-          link.download = 'Pov_Visal_Resume.pdf';
-          link.click();
+          try {
+            const link = document.createElement('a');
+            link.href = '/resume.pdf';
+            link.download = 'Pov_Visal_Resume.pdf';
+            link.click();
+          } catch (err) {
+            // ignore in non-browser environments
+          }
           break;
         case 'clear':
           setTerminalHistory([]);
@@ -147,47 +134,49 @@ Swap:              0           0           0`;
       }
     }
 
-    setTerminalHistory([...terminalHistory, { command: `visal@info:~$ ${terminalInput}`, output }]);
+    setTerminalHistory(prev => [...prev, { command: `visal@info:~$ ${terminalInput}`, output }]);
     setTerminalInput('');
   };
 
   return (
-    <div className="bg-slate-900/80 rounded-xl overflow-hidden shadow-2xl border border-slate-700 hover:border-orange-500/50 transition-colors duration-300 font-mono text-sm max-w-4xl backdrop-blur-sm">
-      <div className="bg-slate-800/90 px-4 py-3 flex items-center gap-2 border-b border-slate-700">
-        <div className="flex gap-2">
-          <div className="w-3 h-3 rounded-full bg-red-500"></div>
-          <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-          <div className="w-3 h-3 rounded-full bg-green-500"></div>
-        </div>
-        <div className="ml-4 text-slate-400 text-xs flex items-center gap-2 font-sans font-medium tracking-wide">
-          <SquareTerminal size={14} /> visal@info: ~
-        </div>
-      </div>
-      
-      <div ref={terminalScrollRef} className="p-5 h-72 overflow-y-auto bg-slate-950/80 text-slate-300 flex flex-col gap-2">
-        {terminalHistory.map((item, idx) => (
-          <div key={idx}>
-            {item.command && (
-              <div className="text-orange-400">
-                {item.command}
-              </div>
-            )}
-            <div className="whitespace-pre-wrap text-emerald-400 leading-relaxed">{item.output}</div>
+    <div className="w-full flex justify-start py-6 perspective-1000 px-4 md:px-8">
+      <div 
+        ref={tiltRef}
+        className="w-full max-w-4xl bg-slate-900/60 backdrop-blur-md rounded-xl overflow-hidden shadow-[0_0_30px_rgba(6,182,212,0.15)] border border-cyan-500/30 transition-transform duration-100 ease-out font-mono text-sm"
+        style={{ transformStyle: 'preserve-3d' }}
+      >
+        <div className="bg-slate-800/80 px-4 py-3 flex items-center gap-2 border-b border-cyan-900/50">
+          <div className="flex gap-2">
+            <div className="w-3 h-3 rounded-full bg-rose-500/80"></div>
+            <div className="w-3 h-3 rounded-full bg-amber-500/80"></div>
+            <div className="w-3 h-3 rounded-full bg-emerald-500/80"></div>
           </div>
-        ))}
-        <div ref={terminalEndRef} />
+          <div className="ml-4 text-cyan-400/80 text-xs flex items-center gap-2 font-bold tracking-widest uppercase">
+            <SquareTerminal size={14} /> Nexus Uplink
+          </div>
+        </div>
         
-        <form onSubmit={handleTerminalSubmit} className="flex items-center gap-2 mt-3">
-          <span className="text-orange-400 shrink-0">visal@info:~$</span>
-          <input 
-            type="text" 
-            value={terminalInput}
-            onChange={(e) => setTerminalInput(e.target.value)}
-            className="bg-transparent border-none outline-none flex-1 text-slate-200 w-full"
-            autoComplete="off"
-            spellCheck="false"
-          />
-        </form>
+        <div ref={terminalScrollRef} className="p-6 h-80 overflow-y-auto bg-[#05070e]/80 text-slate-300 flex flex-col gap-3">
+          {terminalHistory.map((item, idx) => (
+            <div key={idx}>
+              {item.command && <div className="text-orange-400 font-bold">{item.command}</div>}
+              <div className="whitespace-pre-wrap text-cyan-200 leading-relaxed">{item.output}</div>
+            </div>
+          ))}
+          <div ref={terminalEndRef} />
+          
+          <form onSubmit={handleTerminalSubmit} className="flex items-center gap-2 mt-2">
+            <span className="text-orange-400 font-bold shrink-0">visal@info:~$</span>
+            <input 
+              type="text" 
+              value={terminalInput}
+              onChange={(e) => setTerminalInput(e.target.value)}
+              className="bg-transparent border-none outline-none flex-1 text-cyan-100 w-full"
+              autoComplete="off"
+              spellCheck="false"
+            />
+          </form>
+        </div>
       </div>
     </div>
   );

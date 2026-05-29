@@ -13,8 +13,14 @@ export const TechStack = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {techStack.map((category, idx) => (
-          <div key={idx} className="bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-700 shadow-sm hover:border-orange-500/50 hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+        {techStack.map((category, idx) => {
+          // allow targeted placement for specific categories on large screens
+          let placementClass = '';
+          if (category.category === 'DevSecOps & Delivery') placementClass = 'lg:col-start-2 lg:row-start-2';
+          if (category.category === 'Cloud & Infrastructure') placementClass = 'lg:col-start-1 lg:row-start-2';
+
+          return (
+          <div key={idx} className={`${placementClass} bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-700 shadow-sm hover:border-orange-500/50 hover:shadow-md transition-all duration-300 relative overflow-hidden group`}>
             <div className="absolute top-0 right-0 p-6 opacity-5 transform translate-x-4 -translate-y-4 group-hover:scale-110 group-hover:opacity-10 transition-all duration-500">
               {React.cloneElement(category.icon, { size: 100 })}
             </div>
@@ -38,8 +44,11 @@ export const TechStack = () => {
               ))}
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
+
+      {/* fixed cloud badge removed per UX request */}
     </AnimatedSection>
   );
 };
