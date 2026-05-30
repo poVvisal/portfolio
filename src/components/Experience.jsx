@@ -106,7 +106,7 @@ export const Experience = () => {
   }, []);
 
   return (
-    <AnimatedSection id="experience">
+    <AnimatedSection id="experience" ref={sectionRef}>
       <div className="mb-12 text-left">
         <h3 className="text-3xl font-bold mb-4 text-white">Work Experience</h3>
         <p className="max-w-2xl text-slate-400 text-lg">
@@ -114,7 +114,7 @@ export const Experience = () => {
         </p>
       </div>
 
-      <div className="experience-timeline relative ml-4 max-w-4xl space-y-12 pb-8 pl-8 md:pl-12">
+      <div className="experience-timeline relative ml-4 max-w-4xl space-y-12 pb-8 pl-14 md:pl-24">
         <div aria-hidden="true" className="experience-timeline__rail">
           <span className="experience-timeline__track" />
           <span className="experience-timeline__fill" />
@@ -137,17 +137,28 @@ export const Experience = () => {
               className={`experience-card relative ${isActive ? 'experience-card--active' : ''}`}
             >
               <div
-                className={`absolute -left-[26px] md:-left-[30px] top-1 border-[5px] p-2 rounded-full transition-all duration-500 ${item.iconWrapperClassName} ${isActive ? 'experience-card__marker--active' : ''}`}
+                className={`absolute -left-[42px] md:-left-[46px] top-1 border-[5px] p-2 rounded-full transition-all duration-500 ${item.iconWrapperClassName} ${isActive ? 'experience-card__marker--active' : ''}`}
               >
                 <Briefcase size={20} className={item.iconClassName} />
               </div>
-              <div className="experience-card__panel bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-700 shadow-sm transition-all duration-500">
-                <span className={`inline-block text-xs font-bold px-3 py-1.5 rounded-full mb-4 border ${item.badgeClassName}`}>
-                  {item.year}
-                </span>
-                <h4 className={`text-xl font-bold ${item.titleClassName}`}>{item.title}</h4>
-                <p className={`font-medium mb-4 text-sm ${item.companyClassName}`}>{item.company}</p>
-                <p className="text-slate-400 text-sm leading-relaxed">{item.description}</p>
+              <div className="experience-card__panel group relative bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-sm transition-all duration-500 hover:border-orange-500/50 hover:shadow-md">
+                <div className="absolute inset-0 z-0">
+                  <img
+                    src="/experience-bg.png"
+                    alt="Cloud Tech Background"
+                    className={`w-full h-full object-cover mix-blend-screen transition-all duration-700 pointer-events-none ${isActive ? 'opacity-60' : 'opacity-25'} group-hover:opacity-85 group-hover:scale-105`}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-slate-800/30 pointer-events-none" />
+                </div>
+
+                <div className="relative z-10 p-6 md:p-8">
+                  <span className={`inline-block text-xs font-bold px-3 py-1.5 rounded-full mb-4 border ${item.badgeClassName}`}>
+                    {item.year}
+                  </span>
+                  <h4 className={`text-xl font-bold ${item.titleClassName}`}>{item.title}</h4>
+                  <p className={`font-medium mb-4 text-sm ${item.companyClassName}`}>{item.company}</p>
+                  <p className="text-slate-400 text-sm leading-relaxed">{item.description}</p>
+                </div>
               </div>
             </div>
           );
