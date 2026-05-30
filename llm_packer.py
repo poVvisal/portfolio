@@ -3,12 +3,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import time
 from pathlib import Path
 from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parent
-OUTPUT_FILE = ROOT / "project_context.md"
+OUTPUT_FILE = Path(r"C:\Users\kingczin\Documents\Projects\Portfolio-llmpacker\project_context.md")
 MAX_FILE_SIZE = 500 * 1024
 
 IGNORED_DIRS = {
@@ -52,7 +53,7 @@ IGNORED_FILES = {
 
 IGNORED_EXTENSIONS = {
     ".png",
-    ".jpg"
+    ".jpg",
     ".md",
     ".jpeg",
     ".gif",
@@ -84,7 +85,6 @@ TEXT_EXTENSIONS = {
     ".mjs",
     ".cjs",
     ".json",
-    ".md",
     ".markdown",
     ".txt",
     ".css",
@@ -163,6 +163,8 @@ def should_ignore_file(path: Path) -> bool:
         return True
     if suffix in IGNORED_EXTENSIONS:
         return True
+    if suffix == ".md" and not lower_name.startswith(("readme", "license", "changelog")):
+        return True
     if lower_name.endswith((".min.js", ".min.css")):
         return True
     return False
@@ -177,6 +179,8 @@ def is_likely_text_file(path: Path) -> bool:
         return True
     if lower_name.startswith(("readme", "license", "changelog", "makefile", "dockerfile")):
         return True
+    if suffix == ".md":
+        return lower_name.startswith(("readme", "license", "changelog"))
     if path.name.startswith(".") and path.name not in IGNORED_FILES:
         return True
     return False
@@ -351,6 +355,42 @@ def render_markdown(root: Path, framework: str, files: list[Path]) -> str:
     return "\n".join(lines)
 
 
+def generate_context(root: Path, output_path: Path, framework_override: str | None, no_prompt: bool) -> None:
+    framework = framework_override or detect_framework(root)
+    if not framework_override and not no_prompt and framework == "Unknown":
+        framework = prompt_framework(framework)
+
+    files = iter_project_files(root, {output_path})
+    markdown = render_markdown(root, framework, files)
+    output_path.write_text(markdown, encoding="utf-8", newline="\n")
+
+
+def snapshot_project_files(root: Path, output_path: Path) -> tuple[tuple[str, int, int], ...]:
+    files = iter_project_files(root, {output_path})
+    snapshot: list[tuple[str, int, int]] = []
+    for file_path in files:
+        relative_path = file_path.relative_to(root).as_posix()
+        stat_result = file_path.stat()
+        snapshot.append((relative_path, stat_result.st_mtime_ns, stat_result.st_size))
+    return tuple(snapshot)
+
+
+def watch_for_changes(
+    root: Path,
+    output_path: Path,
+    framework_override: str | None,
+    no_prompt: bool,
+    poll_interval: float,
+) -> None:
+    last_snapshot: tuple[tuple[str, int, int], ...] | None = None
+    while True:
+        current_snapshot = snapshot_project_files(root, output_path)
+        if current_snapshot != last_snapshot:
+            generate_context(root, output_path, framework_override, no_prompt)
+            last_snapshot = current_snapshot
+        time.sleep(poll_interval)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Package a project into a single LLM-friendly Markdown file."
@@ -369,17 +409,27 @@ def main() -> int:
         action="store_true",
         help="Disable interactive framework prompting.",
     )
+    parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="Keep running and regenerate the context file whenever workspace files change.",
+    )
+    parser.add_argument(
+        "--watch-interval",
+        type=float,
+        default=1.0,
+        help="Polling interval in seconds when --watch is enabled.",
+    )
     args = parser.parse_args()
 
-    framework = args.framework or detect_framework(ROOT)
-    if not args.framework and not args.no_prompt and framework == "Unknown":
-        framework = prompt_framework(framework)
-
     output_path = Path(args.output).resolve()
-    files = iter_project_files(ROOT, {output_path})
-    markdown = render_markdown(ROOT, framework, files)
-
-    output_path.write_text(markdown, encoding="utf-8", newline="\n")
+    if args.watch:
+        try:
+            watch_for_changes(ROOT, output_path, args.framework, args.no_prompt, args.watch_interval)
+        except KeyboardInterrupt:
+            return 0
+    else:
+        generate_context(ROOT, output_path, args.framework, args.no_prompt)
     return 0
 
 
